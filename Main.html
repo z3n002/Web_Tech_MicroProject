@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <title>Logistics Tracking — Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+    <div class="app">
+        <header class="app-header">
+            <div style="display:flex; gap:12px; align-items:center;">
+                <button id="btnToggleLeft" class="btn btn-light btn-ghost" title="Toggle left"><i
+                        class="fa fa-bars"></i></button>
+                <h3>Logistics Tracking</h3>
+                <div class="chip">Demo • </div>
+                <div class="chip" id="liveCountChip">Live: <strong id="liveCount">0</strong></div>
+            </div>
+
+
+            <div style="display:flex; gap:10px; align-items:center;">
+                <div class="form-check form-switch" title="Dark mode">
+                    <input type="checkbox" class="form-check-input" id="darkToggle" />
+                    <label class="form-check-label text-white" for="darkToggle">Dark</label>
+                </div>
+                <button id="btnStopSim" class="btn btn-light" title="Pause/Resume Simulation">Pause Sim</button>
+                <button id="btnReset" class="btn btn-light" title="Reset demo"><i
+                        class="fa fa-rotate-left"></i></button>
+            </div>
+
+        </header>
+
+        <aside class="left-panel" id="leftPanel">
+            <h5>Controls</h5>
+
+            <div class="mb-2">
+                <label class="form-label small">Search</label>
+                <input id="searchBox" class="form-control form-control-sm" placeholder="Search trucks.." />
+            </div>
+
+            <div class="mb-2">
+                <label class="form-label small">Add Truck</label>
+                <div class="d-flex gap-2">
+                    <input id="newTruckId" class="form-control form-control-sm" placeholder="TRK-500" />
+                    <button id="addTruckBtn" class="btn btn-primary btn-sm">Add</button>
+                </div>
+            </div>
+
+            <div class="mb-2">
+                <label class="form-label small">Map View</label>
+                <div class="d-flex gap-2">
+                    <button id="btnStreets" class="btn btn-outline-secondary btn-sm">Streets</button>
+                    <button id="btnSatellite" class="btn btn-outline-secondary btn-sm">Satellite</button>
+                </div>
+            </div>
+
+            <div class="mb-2">
+                <label class="form-label small">Route Builder</label>
+                <div class="small text-muted mb-1">Click map to add points – Start → Finish</div>
+                <div class="d-flex gap-2">
+                    <button id="startRoute" class="btn btn-success btn-sm">Start</button>
+                    <button id="finishRoute" class="btn btn-warning btn-sm">Finish</button>
+                    <button id="cancelRoute" class="btn btn-danger btn-sm">Cancel</button>
+                </div>
+            </div>
+
+            <div class="mb-2">
+                <label class="form-label small">Routes</label>
+                <div id="routesList" style="max-height:200px; overflow:auto;"></div>
+            </div>
+
+            <div class="mb-2">
+                <label class="form-label small">Traffic Legend</label>
+                <div class="traffic-legend">
+                    <span class="seg" style="background:lime"></span><small class="muted-small">Clear</small>
+                    <span class="seg" style="background:gold"></span><small class="muted-small">Moderate</small>
+                    <span class="seg" style="background:orangered"></span><small class="muted-small">Heavy</small>
+                </div>
+            </div>
+
+            <div class="mb-2">
+                <label class="form-label small">Simulation Speed</label>
+                <input id="simSpeed" type="range" min="0.4" max="3" step="0.1" value="1" />
+            </div>
+
+            <div class="mb-2">
+                <label class="form-label small">Quick Actions</label>
+                <div class="d-flex flex-column gap-2">
+
+                    <button id="btnClear" class="btn btn-outline-danger btn-sm">Clear Routes</button>
+                </div>
+            </div>
+
+            <hr />
+            <div class="muted-small">Tip: Create routes and assign them to trucks. Weather adjusts ETA; traffic affects
+                speed.</div>
+        </aside>
+
+        <main class="map-panel" id="mapPanel">
+            <div id="map"></div>
+            <div id="gpsPulse" class="gps-pulse" style="display:none;"></div>
+            <div class="toast-area" id="toastArea"></div>
+        </main>
+
+        <aside class="right-panel" id="rightPanel">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 style="margin:0;">Fleet & Shipments</h5>
+                <div class="muted-small">Active trucks: <strong id="truckCount">0</strong></div>
+            </div>
+
+            <div class="mb-2 mt-2">
+                <label class="form-label small">Filter</label>
+                <input id="filterTruck" class="form-control form-control-sm"
+                    placeholder="Filter by id/status/route..." />
+            </div>
+
+            <div id="truckList" style="max-height:36vh; overflow:auto; margin-bottom:10px;"></div>
+
+            <div class="analytics-card">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="small muted-small">Average ETA</div>
+                        <div id="avgEta" style="font-weight:700; font-size:18px;">—</div>
+                    </div>
+                    <div style="width:180px;">
+                        <canvas id="chartShipments" height="80"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <h6>Logs</h6>
+            <div id="logBox"
+                style="height:20vh; overflow:auto; font-size:13px; color:#333; background:rgba(255,255,255,0.75); padding:10px; border-radius:8px;">
+            </div>
+        </aside>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>
